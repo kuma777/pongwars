@@ -1,0 +1,162 @@
+<DOCTYPE html>
+<html>
+    <body>
+        <canvas id="main" width="1000" height="1000"></canvas>
+        <script>
+const Grid = 100
+const BGPalette = [
+    'hsla(0deg  , 30%, 40%, 1)',
+    'hsla(60deg , 30%, 40%, 1)',
+    'hsla(120deg, 30%, 40%, 1)',
+    'hsla(180deg, 30%, 40%, 1)',
+    'hsla(210deg, 30%, 40%, 1)',
+    'hsla(240deg, 30%, 40%, 1)',
+]
+const FGPalette = [
+    'hsla(0deg  , 70%, 60%, 1)',
+    'hsla(60deg , 70%, 60%, 1)',
+    'hsla(120deg, 70%, 60%, 1)',
+    'hsla(180deg, 70%, 60%, 1)',
+    'hsla(210deg, 70%, 60%, 1)',
+    'hsla(240deg, 70%, 60%, 1)',
+]
+
+class World
+{
+    matrix
+
+    constructor()
+    {
+        let n = BGPalette.length
+
+        this.matrix = []
+        for (let y = 0; y < Grid; y++)
+        {
+            this.matrix[y] = []
+            for (let x = 0; x < Grid; x++)
+            {
+                let xn = x - Grid / 2
+                let yn = y - Grid / 2
+                let t = Math.atan2(yn, xn) + Math.PI
+                let i = t / (2.0 * Math.PI)
+                this.matrix[y][x] = Math.floor(i * n) % n
+            }
+        }
+    }
+
+    update(context)
+    {
+        for (let y = 0; y < Grid; y++)
+        {
+            for (let x = 0; x < Grid; x++)
+            {
+                context.fillStyle = BGPalette[this.matrix[y][x]]
+                context.fillRect(x * 10, y * 10, 10, 10)
+            }
+        }
+    }
+
+    checkCollision(p, id)
+    {
+        let x = Math.floor(p[0] / 10)
+        let y = Math.floor(p[1] / 10)
+        if (x < 0 || x >= Grid)
+            return true
+        if (y < 0 || y >= Grid)
+            return true
+        if (this.matrix[y][x] != id)
+        {
+            this.matrix[y][x] = id
+            return true
+        }
+        return false
+    }
+}
+
+class Ball
+{
+    id
+
+    position = [0.0, 0.0]
+    velocity = [0.0, 0.0]
+
+    constructor(id, position, velocity)
+    {
+        this.id       = id
+        this.position = position
+        this.velocity = velocity
+    }
+
+    update(context, dt, world)
+    {
+        this.position[0] += this.velocity[0] * dt
+        if (world.checkCollision(this.position, this.id))
+        {
+            this.position[0] -= this.velocity[0] * dt
+            this.velocity[0] *= -1.0
+            this.position[0] += this.velocity[0] * dt
+        }
+
+        this.position[1] += this.velocity[1] * dt
+        if (world.checkCollision(this.position, this.id))
+        {
+            this.position[1] -= this.velocity[1] * dt
+            this.velocity[1] *= -1.0
+            this.position[1] += this.velocity[1] * dt
+        }
+
+        context.fillStyle = FGPalette[this.id]
+        context.beginPath()
+        context.arc(this.position[0], this.position[1], 5, 0, 2.0 * Math.PI)
+        context.closePath()
+        context.fill()
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    let canvas  = document.querySelector('#main')
+    let context = canvas.getContext('2d')
+
+    let w = canvas.clientWidth
+    let h = canvas.clientHeight
+
+    context.fillStyle = 'rgba(0, 0, 0, 1)'
+    context.fillRect(0, 0, w, h)
+
+    let range = (i, n, s) => {
+        let x0 = 1.0 - Math.cos(2.0 * Math.PI * i / n)
+        let x1 = 1.0 - Math.cos(2.0 * Math.PI * (i + 1) / n)
+        let y0 = 1.0 - Math.sin(2.0 * Math.PI * i / n)
+        let y1 = 1.0 - Math.sin(2.0 * Math.PI * (i + 1) / n)
+        return [
+            Math.floor((s / 2) * (x0 + (x1 - x0) * Math.random())),
+            Math.floor((s / 2) * (y0 + (y1 - y0) * Math.random())),
+        ]
+    }
+
+    let sign = (s) => {
+        return [
+            s * ((Math.random() >= 0.5) ? 1 : -1),
+            s * ((Math.random() >= 0.5) ? 1 : -1),
+        ]
+    }
+
+    let world = new World()
+    let n = FGPalette.length
+    let balls = []
+    for (let i = 0; i < n; i++)
+    {
+        balls.push(new Ball(i, range(i, n, 1000), sign(500)))
+    }
+
+    setInterval(() => {
+        world.update(context)
+        for (let ball of balls)
+        {
+            ball.update(context, 0.01667, world)
+        }
+    }, 16.67)
+})
+        </script>
+    </body>
+</html>
